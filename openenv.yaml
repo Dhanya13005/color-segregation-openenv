@@ -1,24 +1,50 @@
-name: color-segregation-env
-description: AI environment for color-based product segregation
+# openenv.yaml — AI Conveyor Color Segregation System
+# =====================================================
+# Environment configuration template.
+# Copy this file and fill in real values for production.
+# NEVER commit real secrets to version control.
+#
+# Usage:
+#   The app reads these keys with YAML fallback:
+#   os.environ.get(KEY) takes priority over this file.
+#
+# Override any key via shell:
+#   export SECRET_KEY="my-real-secret"
+#   uvicorn app:app --port 8000
 
-endpoints:
-  reset: /reset
-  step: /step
-  state: /state
+# ── Server ─────────────────────────────────────────────────────────────────────
+# Port for uvicorn to bind to.
+FASTAPI_PORT: 8000
 
-actions:
-  - red
-  - blue
-  - green
+# ── Database ───────────────────────────────────────────────────────────────────
+# Path to SQLite database file (relative to app.py, or absolute).
+# Change to an absolute path if running in Docker or a managed environment.
+DB_PATH: "scores.db"
 
-observation:
-  items:
-    - color: string
-      position: int
-  score: int
-  done: bool
+# ── Debug ──────────────────────────────────────────────────────────────────────
+# Set to "false" in production to disable verbose logging and auto-reload.
+DEBUG: "true"
 
-tasks:
-  - name: easy
-  - name: medium
-  - name: hard
+# ── Security ───────────────────────────────────────────────────────────────────
+# Secret key for session signing / JWT (if you extend auth).
+# REPLACE THIS with a long random string: python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY: "REPLACE_ME_with_a_real_secret_key_at_least_32_chars_long"
+
+# ── CORS ───────────────────────────────────────────────────────────────────────
+# Comma-separated allowed origins for production (not used yet — wired in app.py).
+# Example: "https://myapp.example.com,https://api.example.com"
+CORS_ORIGINS: "*"
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+# Toggle mock auth (true = use hardcoded MOCK_USERS dict in app.py).
+# Set to "false" and implement real DB user lookup in production.
+MOCK_AUTH: "true"
+
+# ── Inference ──────────────────────────────────────────────────────────────────
+# Path to a trained model file (used by inference.py when real model is wired).
+# MODEL_PATH: "models/color_classifier.pt"
+
+# ── Feature Flags ──────────────────────────────────────────────────────────────
+# Enable server-side AI inference endpoint (POST /api/classify).
+# Set to "true" once inference.py is wired to a real model.
+ENABLE_INFERENCE_ENDPOINT: "false"

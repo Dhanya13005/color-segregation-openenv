@@ -1,35 +1,329 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AI Color Segregation</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI Conveyor Color Segregation System – real-time industrial simulation" />
+  <meta name="theme-color" content="#0d1b3e" />
+  <title>AI Conveyor Color Segregation System</title>
+
+  <!-- Preconnect for Google Fonts (noted in README: remove if privacy is a concern) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Favicon using SVG logo -->
+  <link rel="icon" href="logo.svg" type="image/svg+xml" />
 </head>
+
 <body>
 
-<h1>🚀 AI Conveyor System</h1>
+  <!-- ═══════════════════════════════════════════
+       LOGIN OVERLAY
+       Shown on first load; hidden after login.
+  ════════════════════════════════════════════ -->
+  <div id="login-overlay" role="dialog" aria-modal="true" aria-labelledby="login-heading">
 
-<div class="game-container">
+    <div id="login-card">
 
-    <div class="belt">
-        <div id="item" class="item"></div>
-    </div>
+      <!-- Logo + Heading -->
+      <div class="login-logo">
+        <img src="logo.svg" alt="AI Conveyor Logo" width="72" height="72" />
+        <h1 id="login-heading">AI Conveyor System</h1>
+        <p>Color Segregation Simulation</p>
+      </div>
 
-    <div class="controls">
-        <button onclick="sendAction('red')" class="red">🔴</button>
-        <button onclick="sendAction('blue')" class="blue">🔵</button>
-        <button onclick="sendAction('green')" class="green">🟢</button>
-    </div>
+      <!-- Error message (hidden by default) -->
+      <div id="login-error" class="hidden" role="alert" aria-live="assertive"></div>
 
-    <div class="stats">
-        <p id="score">Score: 0</p>
-        <p id="status">Running...</p>
-    </div>
+      <!-- Username field -->
+      <div class="field-group">
+        <label for="login-username">Username or Email</label>
+        <input
+          id="login-username"
+          type="text"
+          name="username"
+          autocomplete="username"
+          placeholder="Enter username"
+          aria-required="true"
+          aria-describedby="login-error"
+        />
+      </div>
 
-</div>
+      <!-- Password field -->
+      <div class="field-group">
+        <label for="login-password">Password</label>
+        <input
+          id="login-password"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          placeholder="Enter password"
+          aria-required="true"
+          aria-describedby="login-error"
+        />
+      </div>
 
-<audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+      <!-- Submit -->
+      <button id="login-btn" type="button" aria-label="Log in to the system">
+        LOGIN
+      </button>
 
-<script src="script.js"></script>
+    </div><!-- #login-card -->
+  </div><!-- #login-overlay -->
+
+
+  <!-- ═══════════════════════════════════════════
+       MAIN APP SHELL  (hidden until logged in)
+  ════════════════════════════════════════════ -->
+  <div id="app" class="hidden" aria-label="AI Conveyor Color Segregation System">
+
+    <!-- ── HEADER ─────────────────────────────── -->
+    <header id="header" role="banner">
+
+      <!-- Left: live score -->
+      <div id="score-display" aria-label="Current score">
+        <span class="label">Score</span>
+        <span id="score-value" aria-live="polite" aria-atomic="true">0</span>
+      </div>
+
+      <!-- Center: title -->
+      <div id="header-title">
+        <img src="logo.svg" alt="" role="presentation" width="36" height="36" />
+        <h2>🚀 AI Conveyor System</h2>
+      </div>
+
+      <!-- Right: logged-in user -->
+      <div id="user-display" aria-label="Logged-in user">
+        <div id="user-avatar" aria-hidden="true">U</div>
+        <span id="username-display">user</span>
+      </div>
+
+    </header>
+
+
+    <!-- ── MAIN CONTENT GRID ───────────────────── -->
+    <main id="main-content" role="main">
+
+      <!-- ── MOVES LOG ─────────────────────────── -->
+      <section
+        id="moves-log-panel"
+        class="glass-panel"
+        aria-labelledby="moves-log-heading"
+      >
+        <div class="panel-title" id="moves-log-heading" aria-hidden="true">
+          Live Move Feed
+        </div>
+        <div
+          id="moves-log"
+          role="log"
+          aria-label="Live moves log"
+          aria-live="polite"
+          aria-relevant="additions"
+        >
+          <!-- Move entries injected by JS -->
+        </div>
+      </section>
+
+      <!-- ── CONVEYOR BELT ─────────────────────── -->
+      <section
+        id="conveyor-panel"
+        class="glass-panel"
+        aria-labelledby="conveyor-heading"
+      >
+        <div class="panel-title" id="conveyor-heading" aria-hidden="true">
+          Conveyor Belt — Color Segregation
+        </div>
+
+        <!-- Belt track -->
+        <div
+          id="belt-track"
+          role="img"
+          aria-label="Conveyor belt. Item is moving from left to right."
+        >
+          <!-- Animated belt ribs -->
+          <div id="belt-lines" aria-hidden="true">
+            <!-- Generated by JS for performance -->
+          </div>
+
+          <!-- Left & Right rollers -->
+          <div class="belt-roller left" aria-hidden="true"></div>
+          <div class="belt-roller right" aria-hidden="true"></div>
+
+          <!-- The moving item – positioned & animated by JS -->
+          <div
+            id="conveyor-item"
+            role="status"
+            aria-label="No item on belt"
+            aria-live="off"
+          ></div>
+
+          <!-- Feedback flash (✓ / ✗) -->
+          <div id="feedback-overlay" aria-hidden="true"></div>
+        </div>
+
+        <!-- Status dots below belt -->
+        <div id="belt-status" aria-hidden="true">
+          <div class="status-dot" id="sd1"></div>
+          <div class="status-dot" id="sd2"></div>
+          <div class="status-dot" id="sd3"></div>
+        </div>
+
+      </section>
+
+      <!-- ── COLOR SELECTION BUTTONS ───────────── -->
+      <section
+        id="color-panel"
+        class="glass-panel"
+        aria-labelledby="color-panel-heading"
+      >
+        <div class="panel-title" id="color-panel-heading" aria-hidden="true">
+          Select Detected Color
+        </div>
+
+        <div id="color-buttons" role="group" aria-label="Color selection buttons">
+
+          <button
+            id="btn-red"
+            class="color-btn"
+            data-color="red"
+            aria-label="Select Red (keyboard: R or 1)"
+            aria-pressed="false"
+          >
+            <div class="btn-dot" aria-hidden="true"></div>
+            Red
+            <span class="btn-shortcut" aria-hidden="true">R / 1</span>
+          </button>
+
+          <button
+            id="btn-blue"
+            class="color-btn"
+            data-color="blue"
+            aria-label="Select Blue (keyboard: B or 2)"
+            aria-pressed="false"
+          >
+            <div class="btn-dot" aria-hidden="true"></div>
+            Blue
+            <span class="btn-shortcut" aria-hidden="true">B / 2</span>
+          </button>
+
+          <button
+            id="btn-green"
+            class="color-btn"
+            data-color="green"
+            aria-label="Select Green (keyboard: G or 3)"
+            aria-pressed="false"
+          >
+            <div class="btn-dot" aria-hidden="true"></div>
+            Green
+            <span class="btn-shortcut" aria-hidden="true">G / 3</span>
+          </button>
+
+        </div>
+      </section>
+
+      <!-- ── CONTROLS ───────────────────────────── -->
+      <section
+        id="controls-panel"
+        class="glass-panel"
+        aria-labelledby="controls-heading"
+      >
+        <div class="panel-title" id="controls-heading" aria-hidden="true">
+          Simulation Controls
+        </div>
+
+        <div id="controls-bar" role="toolbar" aria-label="Simulation controls">
+
+          <button id="btn-start"
+            class="ctrl-btn"
+            title="Start simulation (Space)"
+            aria-label="Start simulation"
+            aria-keyshortcuts="Space"
+          >
+            <span class="icon" aria-hidden="true">▶</span> START
+          </button>
+
+          <button id="btn-pause"
+            class="ctrl-btn"
+            title="Pause / Resume (Space when running)"
+            aria-label="Pause or resume simulation"
+            disabled
+          >
+            <span class="icon" aria-hidden="true">⏸</span> PAUSE
+          </button>
+
+          <button id="btn-stop"
+            class="ctrl-btn"
+            title="Stop simulation (S)"
+            aria-label="Stop simulation"
+            aria-keyshortcuts="S"
+            disabled
+          >
+            <span class="icon" aria-hidden="true">⏹</span> STOP
+          </button>
+
+          <button id="btn-reset"
+            class="ctrl-btn"
+            title="Save score and reset (X)"
+            aria-label="Save score and reset"
+            aria-keyshortcuts="X"
+          >
+            <span class="icon" aria-hidden="true">🔄</span> RESET
+          </button>
+
+        </div>
+      </section>
+
+      <!-- ── SIDEBAR ────────────────────────────── -->
+      <aside id="sidebar" aria-label="Score summary and history">
+
+        <!-- Big score card -->
+        <div id="score-card" class="glass-panel">
+          <div class="big-score" id="sidebar-score" aria-hidden="true">0</div>
+          <div class="score-label">Current Score</div>
+
+          <!-- Accuracy bar -->
+          <div id="accuracy-wrap">
+            <div class="acc-label">
+              <span>Accuracy</span>
+              <span id="accuracy-pct">—</span>
+            </div>
+            <div id="accuracy-bar-bg" role="progressbar" aria-label="Accuracy" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div id="accuracy-bar-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Score history table -->
+        <div id="history-panel" class="glass-panel">
+          <div class="panel-title">Score History</div>
+          <div id="history-table-wrap">
+            <table id="history-table" aria-label="Score history">
+              <thead>
+                <tr>
+                  <th scope="col">User</th>
+                  <th scope="col">Score</th>
+                  <th scope="col">Time</th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody">
+                <!-- Rows injected by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </aside>
+
+    </main><!-- #main-content -->
+  </div><!-- #app -->
+
+  <!-- Score delta notification (floating) -->
+  <div id="score-delta" aria-hidden="true"></div>
+
+  <!-- Main JS — defer for performance -->
+  <script src="script.js" defer></script>
+
 </body>
 </html>
-<p id="status">🤖 AI Running...</p>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">AI Conveyor Logo</title>
+  <desc id="logo-desc">Three colored dots representing Red, Blue, and Green color segregation inside a circular badge</desc>
+
+  <!-- Outer ring -->
+  <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2.5"/>
+  <!-- Inner bg -->
+  <circle cx="60" cy="60" r="52" fill="rgba(255,255,255,0.08)"/>
+
+  <!-- Gear/circuit decorative arcs -->
+  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="6 4"/>
+
+  <!-- Red dot -->
+  <circle cx="38" cy="54" r="13" fill="#FF4C6A" opacity="0.92"/>
+  <circle cx="38" cy="54" r="7" fill="#FF8FA3" opacity="0.6"/>
+
+  <!-- Blue dot -->
+  <circle cx="60" cy="72" r="13" fill="#4C8BFF" opacity="0.92"/>
+  <circle cx="60" cy="72" r="7" fill="#8FB8FF" opacity="0.6"/>
+
+  <!-- Green dot -->
+  <circle cx="82" cy="54" r="13" fill="#36D68C" opacity="0.92"/>
+  <circle cx="82" cy="54" r="7" fill="#80EABB" opacity="0.6"/>
+
+  <!-- Text -->
+  <text x="60" y="31" text-anchor="middle" font-family="'Courier New', monospace" font-size="9" font-weight="700" fill="rgba(255,255,255,0.9)" letter-spacing="2">AI CONVEYOR</text>
+</svg>
