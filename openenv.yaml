@@ -1,0 +1,24 @@
+name: color-segregation-env
+description: AI environment for color-based product segregation
+
+endpoints:
+  reset: /reset
+  step: /step
+  state: /state
+
+actions:
+  - red
+  - blue
+  - green
+
+observation:
+  items:
+    - color: string
+      position: int
+  score: int
+  done: bool
+
+tasks:
+  - name: easy
+  - name: medium
+  - name: hard

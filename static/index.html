@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Color Segregation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>🚀 AI Conveyor System</h1>
+
+<div class="game-container">
+
+    <div class="belt">
+        <div id="item" class="item"></div>
+    </div>
+
+    <div class="controls">
+        <button onclick="sendAction('red')" class="red">🔴</button>
+        <button onclick="sendAction('blue')" class="blue">🔵</button>
+        <button onclick="sendAction('green')" class="green">🟢</button>
+    </div>
+
+    <div class="stats">
+        <p id="score">Score: 0</p>
+        <p id="status">Running...</p>
+    </div>
+
+</div>
+
+<audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+
+<script src="script.js"></script>
+</body>
+</html>
+<p id="status">🤖 AI Running...</p>
