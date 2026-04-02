@@ -1,247 +1,176 @@
-"""
-app.py — AI Conveyor Color Segregation System — FastAPI Backend
-================================================================
-Responsibilities:
-  - Serve static frontend files from /static
-  - POST /api/login  — mock or real authentication
-  - POST /api/scores — persist a score entry
-  - GET  /api/scores — return score history (latest first)
-  - GET  /api/status — health / state check
-
-Persistence: SQLite via Python's built-in sqlite3 module.
-DB file path is configurable via openenv.yaml / environment variable DB_PATH.
-
-Run:
-    uvicorn app:app --reload --port 8000
-
-Requirements (see openenv.yaml):
-    pip install fastapi uvicorn python-multipart pyyaml
-"""
-
-import sqlite3
-import json
-import os
-import secrets
-import hashlib
-import time
-from datetime import datetime, timezone
+import os, secrets, hashlib
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+
 from contextlib import asynccontextmanager
-from typing import Optional
 
-import yaml  # PyYAML — pip install pyyaml
-from fastapi import FastAPI, HTTPException, Request, Response, status
+import yaml
+
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from motor.motor_asyncio import AsyncIOMotorClient
+from jose import jwt
 
-# ─── Load Config from openenv.yaml ───────────────────────────────────────────
-_config_path = Path(__file__).parent / "openenv.yaml"
-_config: dict = {}
+# ================= CONFIG =================
+_cfg_path = Path(__file__).parent / "openenv.yaml"
+_cfg_file = {}
 
-if _config_path.exists():
-    with open(_config_path, "r") as f:
-        _config = yaml.safe_load(f) or {}
+if _cfg_path.exists():
+    with open(_cfg_path) as f:
+        _cfg_file = yaml.safe_load(f) or {}
 
-def cfg(key: str, default=None):
-    """Read from YAML config, then environment variable override, then default."""
-    env_val = os.environ.get(key)
-    if env_val is not None:
-        return env_val
-    return _config.get(key, default)
+def cfg(key, default=None):
+    return os.environ.get(key, _cfg_file.get(key, default))
 
-# ─── Settings ─────────────────────────────────────────────────────────────────
-PORT       = int(cfg("FASTAPI_PORT", 8000))
-DB_PATH    = cfg("DB_PATH", "scores.db")
-DEBUG      = cfg("DEBUG", "true").lower() == "true"
+PORT = int(cfg("FASTAPI_PORT", 8000))
+MONGO_URI = cfg("MONGO_URI")
+MONGO_DB = cfg("MONGO_DB", "conveyor_db")
 SECRET_KEY = cfg("SECRET_KEY", secrets.token_hex(32))
+JWT_ALGO = "HS256"
 
-# ─── Mock user store — replace with a real DB/auth in production ──────────────
-# Format: { username: hashed_password }
-MOCK_USERS = {
-    "admin": hashlib.sha256("admin".encode()).hexdigest(),
-    "demo":  hashlib.sha256("demo".encode()).hexdigest(),
-    "user":  hashlib.sha256("password".encode()).hexdigest(),
-}
+# ================= HASH =================
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
-# ─── Simple in-memory session store (NOT for production use) ─────────────────
-_sessions: dict[str, str] = {}   # token → username
+def verify_password(password: str, hashed: str) -> bool:
+    return hashlib.sha256(password.encode()).hexdigest() == hashed
 
+def create_token(username):
+    exp = datetime.now(timezone.utc) + timedelta(hours=8)
+    return jwt.encode({"sub": username, "exp": exp}, SECRET_KEY, algorithm=JWT_ALGO)
 
-# ─── Database setup ───────────────────────────────────────────────────────────
-def get_db() -> sqlite3.Connection:
-    """Return a new SQLite connection. Called per request for thread safety."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+def decode_token(token):
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGO]).get("sub")
+    except:
+        return None
 
+# ================= DB =================
+client = None
+db = None
 
-def init_db():
-    """Create tables if they don't exist. Called at startup."""
-    conn = get_db()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS scores (
-            id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            username  TEXT    NOT NULL,
-            score     INTEGER NOT NULL,
-            timestamp TEXT    NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
-    if DEBUG:
-        print(f"[DB] Initialised SQLite at '{DB_PATH}'")
-
-
-# ─── Lifespan (replaces deprecated @app.on_event) ────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown hooks."""
-    init_db()
-    if DEBUG:
-        print(f"[APP] AI Conveyor backend running on port {PORT} (debug={DEBUG})")
+    global client, db
+
+    # ✅ FIXED CONNECTION
+    client = AsyncIOMotorClient(MONGO_URI)
+    db = client[MONGO_DB]
+
+    try:
+        await client.admin.command("ping")
+        print("✅ MongoDB Connected")
+    except Exception as e:
+        print("❌ MongoDB Error:", e)
+
+    # Seed users
+    for u in ["admin", "demo"]:
+        if not await db["users"].find_one({"username": u}):
+            await db["users"].insert_one({
+                "username": u,
+                "pw_hash": hash_password("admin123" if u == "admin" else "demo")
+            })
+            print("Seeded:", u)
+
     yield
-    # Shutdown — nothing to clean up for SQLite
+    client.close()
 
+# ================= APP =================
+app = FastAPI(lifespan=lifespan)
 
-# ─── FastAPI App ──────────────────────────────────────────────────────────────
-app = FastAPI(
-    title="AI Conveyor Color Segregation API",
-    version="1.0.0",
-    description="Backend for the AI Conveyor Color Segregation simulation.",
-    lifespan=lifespan,
-)
-
-# CORS — allow all origins for local dev; tighten for production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Change to specific origins in production
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_origins=["*"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ================= AUTH =================
+bearer = HTTPBearer()
 
-# ─── Pydantic Schemas ─────────────────────────────────────────────────────────
-class LoginRequest(BaseModel):
+async def get_user(creds: HTTPAuthorizationCredentials = Depends(bearer)):
+    user = decode_token(creds.credentials)
+    if not user:
+        raise HTTPException(401, "Invalid token")
+    return user
+
+# ================= SCHEMAS =================
+class Register(BaseModel):
     username: str
     password: str
 
+class Login(BaseModel):
+    username: str
+    password: str
 
-class ScoreRequest(BaseModel):
-    user: str
+class Score(BaseModel):
     score: int
-    timestamp: Optional[str] = None
 
+# ================= ROUTES =================
 
-# ─── Helper: validate session token from cookie ───────────────────────────────
-def get_session_user(request: Request) -> Optional[str]:
-    token = request.cookies.get("session_token")
-    return _sessions.get(token) if token else None
+@app.post("/api/register")
+async def register(data: Register):
+    if await db["users"].find_one({"username": data.username}):
+        raise HTTPException(400, "User already exists")
 
+    await db["users"].insert_one({
+        "username": data.username,
+        "pw_hash": hash_password(data.password)
+    })
 
-# ─── API Routes ───────────────────────────────────────────────────────────────
+    return {"success": True}
 
-@app.post("/api/login", summary="Authenticate user and create a session cookie")
-async def login(payload: LoginRequest, response: Response):
-    """
-    Mock authentication endpoint.
-    In production: replace MOCK_USERS with a real user DB query.
-    Returns a session cookie on success.
-    """
-    username = payload.username.strip().lower()
-    pw_hash  = hashlib.sha256(payload.password.encode()).hexdigest()
+@app.post("/api/login")
+async def login(data: Login):
+    user = await db["users"].find_one({"username": data.username})
 
-    stored_hash = MOCK_USERS.get(username)
-    if not stored_hash or not secrets.compare_digest(pw_hash, stored_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"success": False, "message": "Invalid username or password."},
-        )
+    if not user or not verify_password(data.password, user["pw_hash"]):
+        raise HTTPException(401, "Invalid login")
 
-    # Issue a simple session token
-    token = secrets.token_hex(24)
-    _sessions[token] = username
+    token = create_token(data.username)
 
-    response.set_cookie(
-        key="session_token",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        max_age=60 * 60 * 8,  # 8-hour session
-        secure=False,          # Set True behind HTTPS in production
-    )
-
-    return {"success": True, "username": username}
-
-
-@app.post("/api/scores", summary="Save a score entry to the database")
-async def post_score(payload: ScoreRequest):
-    """
-    Persist a score record.
-    Accepts: { user, score, timestamp }
-    timestamp should be ISO-8601 string; defaults to now() if omitted.
-    """
-    ts = payload.timestamp or datetime.now(timezone.utc).isoformat()
-    conn = get_db()
-    try:
-        conn.execute(
-            "INSERT INTO scores (username, score, timestamp) VALUES (?, ?, ?)",
-            (payload.user, payload.score, ts),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-    return {"success": True, "message": "Score saved."}
-
-
-@app.get("/api/scores", summary="Retrieve all score history, latest first")
-async def get_scores():
-    """
-    Returns a JSON array of score objects sorted by id DESC (newest first).
-    Each object: { user, score, timestamp }
-    """
-    conn = get_db()
-    try:
-        rows = conn.execute(
-            "SELECT username AS user, score, timestamp FROM scores ORDER BY id DESC LIMIT 200"
-        ).fetchall()
-    finally:
-        conn.close()
-
-    return [dict(row) for row in rows]
-
-
-@app.get("/api/status", summary="Health check / running state")
-async def get_status():
-    """
-    Simple health-check endpoint.
-    Extend to return server-side simulation state if needed.
-    """
     return {
-        "status": "ok",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "db": DB_PATH,
-        "debug": DEBUG,
+        "success": True,
+        "token": token,
+        "username": data.username
     }
 
 
-# ─── Serve Static Frontend ────────────────────────────────────────────────────
-# Mount AFTER API routes so /api/* takes precedence.
-_static_dir = Path(__file__).parent / "static"
+@app.post("/api/scores")
+async def save_score(data: Score, user: str = Depends(get_user)):
+    await db["scores"].insert_one({
+        "user": user,
+        "score": data.score,
+        "time": datetime.now().isoformat()
+    })
+    return {"success": True} 
 
-@app.get("/", include_in_schema=False)
-async def index():
-    """Serve the main SPA page."""
-    return FileResponse(_static_dir / "index.html")
+@app.post("/openenv/reset")
+async def openenv_reset():
+    return {"status": "reset successful"} 
 
-# Mount /static for assets (CSS, JS, SVG)
-app.mount("/", StaticFiles(directory=str(_static_dir), html=True), name="static")
+@app.get("/api/scores")
+async def get_scores():
+    data = await db["scores"].find().to_list(100)
+    for d in data:
+        d.pop("_id", None)
+    return data
 
+@app.get("/api/status")
+async def status():
+    return {"status": "ok"}
 
-# ─── Entry point for direct execution ─────────────────────────────────────────
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=PORT, reload=DEBUG)
+# ================= STATIC =================
+static_dir = Path(__file__).parent / "static"
+
+@app.get("/")
+async def home():
+    return FileResponse(static_dir / "index.html")
+
+app.mount("/", StaticFiles(directory=static_dir), name="static")
