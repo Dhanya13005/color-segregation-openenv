@@ -200,19 +200,6 @@ body::before {
   box-shadow: 0 0 0 3px rgba(76,139,255,0.2);
 }
 
-/* Login error */
-#login-error {
-  font-size: 0.82rem;
-  color: var(--accent-red);
-  background: rgba(255,76,106,0.1);
-  border: 1px solid rgba(255,76,106,0.25);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  margin-bottom: 14px;
-  text-align: center;
-  animation: shake 0.35s ease;
-}
-
 @keyframes shake {
   0%,100% { transform: translateX(0); }
   20%      { transform: translateX(-6px); }
@@ -220,6 +207,138 @@ body::before {
   60%      { transform: translateX(-4px); }
   80%      { transform: translateX(4px); }
 }
+
+/* ── Auth Tabs ────────────────────────────────────────────────── */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+  outline: none;
+}
+
+.auth-tab.active {
+  background: linear-gradient(135deg, #4C8BFF 0%, #7B5EA7 100%);
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(76,139,255,0.4);
+}
+
+.auth-tab:not(.active):hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.auth-tab:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 2px; }
+
+/* ── Admin hint banner ────────────────────────────────────────── */
+.admin-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,208,96,0.09);
+  border: 1px solid rgba(255,208,96,0.28);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  margin-bottom: 16px;
+  font-size: 0.78rem;
+  color: rgba(255,230,140,0.9);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.admin-hint .hint-icon { font-size: 1rem; flex-shrink: 0; }
+.admin-hint strong { color: var(--accent-gold); }
+
+/* ── Auth messages ────────────────────────────────────────────── */
+.auth-msg {
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.auth-msg.error {
+  color: var(--accent-red);
+  background: rgba(255,76,106,0.1);
+  border: 1px solid rgba(255,76,106,0.25);
+  animation: shake 0.35s ease;
+}
+
+.auth-msg.success {
+  color: var(--accent-green);
+  background: rgba(54,214,140,0.1);
+  border: 1px solid rgba(54,214,140,0.3);
+}
+
+/* ── Switch link + optional label ────────────────────────────── */
+.auth-switch-text {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #7FB3FF;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+  transition: color var(--transition);
+}
+
+.link-btn:hover { color: #a8d0ff; }
+.link-btn:focus-visible { outline: 2px solid rgba(255,255,255,0.7); outline-offset: 2px; border-radius: 2px; }
+
+.optional {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ── Register button ──────────────────────────────────────────── */
+#register-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #36D68C 0%, #1a8050 100%);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter var(--transition), transform var(--transition), box-shadow var(--transition);
+  box-shadow: 0 4px 20px rgba(54,214,140,0.4);
+}
+
+#register-btn:hover  { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(54,214,140,0.5); }
+#register-btn:active { transform: translateY(0); filter: brightness(0.95); }
+#register-btn:focus-visible { outline: 3px solid rgba(255,255,255,0.7); outline-offset: 3px; }
 
 /* Login button */
 #login-btn {
@@ -320,25 +439,70 @@ body::before {
   background-clip: text;
 }
 
-/* User (right) */
+/* User (right) — dropdown wrapper */
 #user-display {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  position: relative;   /* anchor for the dropdown */
 }
 
+/* ── User menu trigger button ─────────────────────────────── */
+#user-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 40px;
+  padding: 5px 12px 5px 5px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition),
+              box-shadow var(--transition);
+  outline: none;
+  color: var(--text-primary);
+}
+
+#user-menu-btn:hover {
+  background: rgba(255,255,255,0.11);
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+#user-menu-btn:focus-visible {
+  outline: 2px solid rgba(76,139,255,0.8);
+  outline-offset: 3px;
+}
+
+/* Active / open state */
+#user-menu-btn[aria-expanded="true"] {
+  background: rgba(76,139,255,0.15);
+  border-color: rgba(76,139,255,0.4);
+}
+
+#user-menu-btn[aria-expanded="true"] #chevron-icon {
+  transform: rotate(180deg);
+}
+
+#chevron-icon {
+  color: var(--text-secondary);
+  transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+  flex-shrink: 0;
+}
+
+/* Avatar circle */
 #user-avatar {
-  width: 34px; height: 34px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4C8BFF, #36D68C);
   display: flex; align-items: center; justify-content: center;
   font-family: 'Orbitron', monospace;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
   text-transform: uppercase;
   flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(76,139,255,0.4);
 }
 
 #username-display {
@@ -347,7 +511,141 @@ body::before {
   color: var(--text-primary);
   font-family: 'Share Tech Mono', monospace;
   letter-spacing: 1px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* ── Dropdown panel ───────────────────────────────────────── */
+#user-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  background: rgba(15, 22, 50, 0.96);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.65),
+              0 0 0 1px rgba(255,255,255,0.04) inset;
+  z-index: 500;
+  overflow: hidden;
+  transform-origin: top right;
+}
+
+/* Animate open */
+#user-dropdown:not(.hidden) {
+  animation: dropdownOpen 0.22s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+@keyframes dropdownOpen {
+  from { opacity: 0; transform: scale(0.9) translateY(-8px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+
+/* Dropdown header (user info) */
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 14px;
+}
+
+.dropdown-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4C8BFF, #36D68C);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 0 14px rgba(76,139,255,0.5);
+}
+
+.dropdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dropdown-name {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-role {
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  font-family: 'Share Tech Mono', monospace;
+}
+
+/* Divider */
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+  margin: 2px 0;
+}
+
+/* Menu items */
+.dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition), color var(--transition), padding-left var(--transition);
+  outline: none;
+}
+
+.dropdown-item svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity var(--transition);
+}
+
+.dropdown-item:hover {
+  background: rgba(255,255,255,0.07);
+  color: var(--text-primary);
+  padding-left: 20px;
+}
+
+.dropdown-item:hover svg { opacity: 1; }
+
+.dropdown-item:focus-visible {
+  outline: 2px solid rgba(76,139,255,0.7);
+  outline-offset: -2px;
+}
+
+/* Logout — danger red */
+.dropdown-item.danger       { color: rgba(255,120,140,0.75); }
+.dropdown-item.danger svg   { color: var(--accent-red); }
+.dropdown-item.danger:hover {
+  background: rgba(255,76,106,0.1);
+  color: var(--accent-red);
+  padding-left: 20px;
+}
+
+/* Last item — bottom padding */
+.dropdown-item:last-child { margin-bottom: 4px; }
 
 /* ─── Main Content ────────────────────────────────────────────── */
 #main-content {
@@ -937,6 +1235,72 @@ body::before {
   80%  { opacity: 0.9; transform: translateX(-50%) translateY(-40px); }
   100% { opacity: 0;  transform: translateX(-50%) translateY(-60px); }
 }
+
+/* ─── Profile Toast ──────────────────────────────────────────── */
+#profile-toast {
+  position: fixed;
+  top: calc(var(--header-h) + 16px);
+  right: 24px;
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15,22,50,0.97);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(20px);
+  animation: toastIn 0.3s var(--spring) both;
+  min-width: 240px;
+  max-width: 300px;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+
+.toast-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4C8BFF, #36D68C);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.toast-body { flex: 1; min-width: 0; }
+
+.toast-name {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.toast-sub {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color var(--transition);
+  flex-shrink: 0;
+}
+
+.toast-close:hover { color: var(--text-primary); }
 
 /* ─── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 900px) {

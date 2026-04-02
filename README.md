@@ -124,4 +124,8 @@ MIT License
 
 ---
 
+<<<<<<< HEAD
 Built using FastAPI + MongoDB + JavaScript
+=======
+Built using FastAPI + MongoDB + JavaScript
+>>>>>>> a963d2b (added openenv reset endpoint)

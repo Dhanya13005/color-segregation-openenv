@@ -1,50 +1,24 @@
 # openenv.yaml — AI Conveyor Color Segregation System
 # =====================================================
-# Environment configuration template.
-# Copy this file and fill in real values for production.
-# NEVER commit real secrets to version control.
-#
-# Usage:
-#   The app reads these keys with YAML fallback:
-#   os.environ.get(KEY) takes priority over this file.
-#
-# Override any key via shell:
-#   export SECRET_KEY="my-real-secret"
-#   uvicorn app:app --port 8000
+# IMPORTANT: Do NOT add &tls=true to the URI.
+# The app uses certifi to handle TLS correctly for Python 3.14 + Atlas.
 
-# ── Server ─────────────────────────────────────────────────────────────────────
-# Port for uvicorn to bind to.
+# ── Server ──────────────────────────────────────────────────────
 FASTAPI_PORT: 8000
 
-# ── Database ───────────────────────────────────────────────────────────────────
-# Path to SQLite database file (relative to app.py, or absolute).
-# Change to an absolute path if running in Docker or a managed environment.
-DB_PATH: "scores.db"
+# ── MongoDB Atlas ───────────────────────────────────────────────
+# Remove &tls=true — certifi handles SSL in code
+MONGO_URI: "mongodb+srv://dhanyags13_db_user:pCksMQIAvnUxYaXp@cluster0.uv5ndj8.mongodb.net/conveyor_db?retryWrites=true&w=majority"
+MONGO_DB: "conveyor_db"
 
-# ── Debug ──────────────────────────────────────────────────────────────────────
-# Set to "false" in production to disable verbose logging and auto-reload.
+# ── JWT ─────────────────────────────────────────────────────────
+# Generate real key: python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY: "ai_conveyor_secret_key_change_in_production_2024"
+JWT_EXPIRE_HOURS: 8
+
+# ── Debug ────────────────────────────────────────────────────────
 DEBUG: "true"
 
-# ── Security ───────────────────────────────────────────────────────────────────
-# Secret key for session signing / JWT (if you extend auth).
-# REPLACE THIS with a long random string: python -c "import secrets; print(secrets.token_hex(32))"
-SECRET_KEY: "REPLACE_ME_with_a_real_secret_key_at_least_32_chars_long"
-
-# ── CORS ───────────────────────────────────────────────────────────────────────
-# Comma-separated allowed origins for production (not used yet — wired in app.py).
-# Example: "https://myapp.example.com,https://api.example.com"
-CORS_ORIGINS: "*"
-
-# ── Auth ───────────────────────────────────────────────────────────────────────
-# Toggle mock auth (true = use hardcoded MOCK_USERS dict in app.py).
-# Set to "false" and implement real DB user lookup in production.
-MOCK_AUTH: "true"
-
-# ── Inference ──────────────────────────────────────────────────────────────────
-# Path to a trained model file (used by inference.py when real model is wired).
-# MODEL_PATH: "models/color_classifier.pt"
-
-# ── Feature Flags ──────────────────────────────────────────────────────────────
-# Enable server-side AI inference endpoint (POST /api/classify).
-# Set to "true" once inference.py is wired to a real model.
-ENABLE_INFERENCE_ENDPOINT: "false"
+# ── Built-in accounts (seeded at startup) ────────────────────────
+# admin / admin123
+# demo  / demo

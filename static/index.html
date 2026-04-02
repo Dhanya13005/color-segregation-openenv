@@ -23,52 +23,142 @@
        LOGIN OVERLAY
        Shown on first load; hidden after login.
   ════════════════════════════════════════════ -->
-  <div id="login-overlay" role="dialog" aria-modal="true" aria-labelledby="login-heading">
+  <div id="login-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-heading">
 
     <div id="login-card">
 
       <!-- Logo + Heading -->
       <div class="login-logo">
         <img src="logo.svg" alt="AI Conveyor Logo" width="72" height="72" />
-        <h1 id="login-heading">AI Conveyor System</h1>
+        <h1 id="auth-heading">AI Conveyor System</h1>
         <p>Color Segregation Simulation</p>
       </div>
 
-      <!-- Error message (hidden by default) -->
-      <div id="login-error" class="hidden" role="alert" aria-live="assertive"></div>
-
-      <!-- Username field -->
-      <div class="field-group">
-        <label for="login-username">Username or Email</label>
-        <input
-          id="login-username"
-          type="text"
-          name="username"
-          autocomplete="username"
-          placeholder="Enter username"
-          aria-required="true"
-          aria-describedby="login-error"
-        />
+      <!-- Tab switcher: LOGIN / REGISTER -->
+      <div class="auth-tabs" role="tablist" aria-label="Authentication mode">
+        <button
+          id="tab-login"
+          class="auth-tab active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-login"
+          type="button"
+        >Login</button>
+        <button
+          id="tab-register"
+          class="auth-tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-register"
+          type="button"
+        >Create Account</button>
       </div>
 
-      <!-- Password field -->
-      <div class="field-group">
-        <label for="login-password">Password</label>
-        <input
-          id="login-password"
-          type="password"
-          name="password"
-          autocomplete="current-password"
-          placeholder="Enter password"
-          aria-required="true"
-          aria-describedby="login-error"
-        />
+      <!-- ── LOGIN PANEL ─────────────────────────── -->
+      <div id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+
+        <!-- Admin hint banner -->
+        
+
+        <!-- Error message -->
+        <div id="login-error" class="auth-msg hidden" role="alert" aria-live="assertive"></div>
+
+        <div class="field-group">
+          <label for="login-username">Username</label>
+          <input
+            id="login-username"
+            type="text"
+            name="username"
+            autocomplete="username"
+            placeholder="Enter username"
+            aria-required="true"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="login-password">Password</label>
+          <input
+            id="login-password"
+            type="password"
+            name="password"
+            autocomplete="current-password"
+            placeholder="Enter password"
+            aria-required="true"
+          />
+        </div>
+
+        <button id="login-btn" type="button" aria-label="Log in to the system">
+          LOGIN
+        </button>
+
+        <p class="auth-switch-text">
+          New here?
+          <button type="button" class="link-btn" id="go-register">Create an account →</button>
+        </p>
       </div>
 
-      <!-- Submit -->
-      <button id="login-btn" type="button" aria-label="Log in to the system">
-        LOGIN
-      </button>
+      <!-- ── REGISTER PANEL ─────────────────────── -->
+      <div id="panel-register" role="tabpanel" aria-labelledby="tab-register" class="hidden">
+
+        <!-- Success / error message -->
+        <div id="register-msg" class="auth-msg hidden" role="alert" aria-live="assertive"></div>
+
+        <div class="field-group">
+          <label for="reg-username">Username</label>
+          <input
+            id="reg-username"
+            type="text"
+            name="reg-username"
+            autocomplete="username"
+            placeholder="Choose a username"
+            aria-required="true"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="reg-email">Email <span class="optional">(optional)</span></label>
+          <input
+            id="reg-email"
+            type="email"
+            name="reg-email"
+            autocomplete="email"
+            placeholder="you@example.com"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="reg-password">Password</label>
+          <input
+            id="reg-password"
+            type="password"
+            name="reg-password"
+            autocomplete="new-password"
+            placeholder="At least 4 characters"
+            aria-required="true"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="reg-confirm">Confirm Password</label>
+          <input
+            id="reg-confirm"
+            type="password"
+            name="reg-confirm"
+            autocomplete="new-password"
+            placeholder="Repeat your password"
+            aria-required="true"
+          />
+        </div>
+
+        <button id="register-btn" type="button" aria-label="Create new account">
+          CREATE ACCOUNT
+        </button>
+
+        <p class="auth-switch-text">
+          Already have an account?
+          <button type="button" class="link-btn" id="go-login">Sign in →</button>
+        </p>
+      </div>
 
     </div><!-- #login-card -->
   </div><!-- #login-overlay -->
@@ -94,11 +184,82 @@
         <h2>🚀 AI Conveyor System</h2>
       </div>
 
-      <!-- Right: logged-in user -->
-      <div id="user-display" aria-label="Logged-in user">
-        <div id="user-avatar" aria-hidden="true">U</div>
-        <span id="username-display">user</span>
-      </div>
+      <!-- Right: user menu dropdown -->
+      <div id="user-display" aria-label="User menu">
+
+        <!-- Clickable trigger -->
+        <button
+          id="user-menu-btn"
+          type="button"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="user-dropdown"
+          aria-label="Open user menu"
+        >
+          <div id="user-avatar" aria-hidden="true">U</div>
+          <span id="username-display">user</span>
+          <svg id="chevron-icon" xmlns="http://www.w3.org/2000/svg"
+            width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        <!-- Dropdown panel -->
+        <div
+          id="user-dropdown"
+          role="menu"
+          aria-label="User options"
+          class="hidden"
+        >
+          <!-- User info header -->
+          <div class="dropdown-header">
+            <div class="dropdown-avatar" aria-hidden="true" id="dropdown-avatar">U</div>
+            <div class="dropdown-info">
+              <span class="dropdown-name" id="dropdown-username">user</span>
+              <span class="dropdown-role" id="dropdown-role">User</span>
+            </div>
+          </div>
+
+          <div class="dropdown-divider"></div>
+
+          <!-- Menu items -->
+          <button class="dropdown-item" id="dd-profile" role="menuitem" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            My Profile
+          </button>
+
+          <button class="dropdown-item" id="dd-scores" role="menuitem" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            My Scores
+          </button>
+
+          <div class="dropdown-divider"></div>
+
+          <button class="dropdown-item danger" id="dd-logout" role="menuitem" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Logout
+          </button>
+        </div>
+
+      </div><!-- #user-display -->
 
     </header>
 
