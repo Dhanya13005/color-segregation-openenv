@@ -1,180 +1,220 @@
 """
-inference.py — AI Color Classification Stub
-============================================
-This module provides a placeholder for the AI inference pipeline that would
-classify the color of an item on the conveyor belt from a camera image or
-image patch.
+inference.py — AI Conveyor Color Segregation System
+====================================================
+OpenEnv Hackathon Submission
 
-HOW TO SWAP IN A REAL MODEL
------------------------------
-1. Install your model framework:
-       pip install torch torchvision   # PyTorch example
-       # or: pip install tensorflow    # TensorFlow example
-       # or: pip install onnxruntime   # ONNX Runtime example
+Required environment variables:
+  API_BASE_URL  — LLM API endpoint         (default: https://api.openai.com/v1)
+  MODEL_NAME    — Model identifier          (default: gpt-4.1-mini)
+  HF_TOKEN      — Hugging Face API token    (REQUIRED, no default)
 
-2. Replace the body of `classify_color()` with:
-   a) Load your model (once, at module level or via a lazy singleton).
-   b) Pre-process `image_or_patch` (resize, normalize, to tensor).
-   c) Run inference.
-   d) Map the predicted class index to one of ["red", "blue", "green"].
-   e) Return the string.
-
-3. Wire `classify_color()` into your backend route (e.g., a POST /api/classify
-   endpoint that accepts a base64-encoded image) and call it from the frontend
-   via fetch() instead of the client-side random picker.
-
-Example real-model swap (PyTorch, illustrative):
-    import torch
-    from torchvision import transforms
-    from PIL import Image
-    import io, base64
-
-    _model = None   # Lazy-loaded singleton
-
-    def _load_model():
-        global _model
-        if _model is None:
-            _model = torch.load("color_classifier.pt", map_location="cpu")
-            _model.eval()
-        return _model
-
-    CLASSES = ["red", "blue", "green"]
-    _transform = transforms.Compose([
-        transforms.Resize((64, 64)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.5]*3, [0.5]*3),
-    ])
-
-    def classify_color(image_or_patch):
-        img = Image.open(io.BytesIO(image_or_patch)).convert("RGB")
-        tensor = _transform(img).unsqueeze(0)
-        with torch.no_grad():
-            logits = _load_model()(tensor)
-        return CLASSES[logits.argmax(dim=1).item()]
+Output format (exact, to stdout):
+  [START] task=<task> env=<env> model=<model>
+  [STEP]  step=<n> action=<action> reward=<0.00> done=<bool> error=<msg|null>
+  [END]   success=<bool> steps=<n> rewards=<r1,r2,...>
 """
 
+import os
+import sys
+import time
 import random
-from typing import Union
 
-# ─── Color constants ─────────────────────────────────────────────────────────
-VALID_COLORS = ["red", "blue", "green"]
+from openai import OpenAI
 
-# Optional: average-color thresholds for a simple rule-based approach.
-# Useful for testing with solid-color patches from a camera.
-_RGB_THRESHOLDS = {
-    "red":   lambda r, g, b: r > 150 and g < 100 and b < 100,
-    "blue":  lambda r, g, b: b > 150 and r < 100 and g < 100,
-    "green": lambda r, g, b: g > 150 and r < 100 and b < 100,
-}
+# ── Environment variables (with defaults where required) ─────────
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+MODEL_NAME   = os.getenv("MODEL_NAME",   "gpt-4.1-mini")
+HF_TOKEN     = os.getenv("HF_TOKEN")     # Required — no default
+
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
+
+# ── OpenAI client (uses HF_TOKEN as api_key) ─────────────────────
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=HF_TOKEN,
+)
+
+# ── Task / env constants ──────────────────────────────────────────
+TASK_NAME = "color-segregation"
+ENV_NAME  = "conveyor-belt"
+COLORS    = ["red", "blue", "green"]
+
+# ─────────────────────────────────────────────────────────────────
+#  ENVIRONMENT  (simulated conveyor belt)
+# ─────────────────────────────────────────────────────────────────
+class ConveyorEnv:
+    """Simulated conveyor belt color-segregation environment."""
+
+    def __init__(self, max_steps: int = 5):
+        self.max_steps        = max_steps
+        self.step_count       = 0
+        self.current_color    = None
+        self.done             = False
+        self.last_action_error= None
+        self._reset_state()
+
+    def _reset_state(self):
+        self.current_color     = random.choice(COLORS)
+        self.step_count        = 0
+        self.done              = False
+        self.last_action_error = None
+
+    def reset(self) -> dict:
+        """Reset environment and return initial observation."""
+        self._reset_state()
+        return {"color": self.current_color, "step": 0}
+
+    def step(self, action: str) -> tuple:
+        """
+        Execute action, return (observation, reward, done, info).
+        action — one of 'red', 'blue', 'green'
+        """
+        self.step_count += 1
+        self.last_action_error = None
+
+        action_clean = action.strip().lower().replace("'", "").replace('"', "")
+
+        # Validate action
+        if action_clean not in COLORS:
+            self.last_action_error = f"invalid_action:{action_clean}"
+            reward = 0.0
+        elif action_clean == self.current_color:
+            reward = 1.0         # correct classification
+        else:
+            reward = 0.0         # wrong classification
+
+        # Spawn next item
+        self.current_color = random.choice(COLORS)
+
+        self.done = self.step_count >= self.max_steps
+        obs = {"color": self.current_color, "step": self.step_count}
+        return obs, reward, self.done, {"error": self.last_action_error}
+
+    def close(self):
+        pass
 
 
-def classify_color(image_or_patch: Union[bytes, str, None] = None) -> str:
+# ─────────────────────────────────────────────────────────────────
+#  LLM AGENT  (calls OpenAI-compatible API to decide action)
+# ─────────────────────────────────────────────────────────────────
+def get_llm_action(obs: dict) -> str:
     """
-    Classify the dominant color of a conveyor belt item.
-
-    This is a STUB implementation that demonstrates the expected interface.
-    It currently:
-      - If `image_or_patch` is a non-empty bytes object, attempts a trivial
-        average-pixel heuristic (requires Pillow) and falls back to random.
-      - Otherwise, returns a random choice from VALID_COLORS to simulate inference.
-
-    Parameters
-    ----------
-    image_or_patch : bytes | str | None
-        Raw image bytes (JPEG/PNG), a base64-encoded string, or None for
-        a fully synthetic demo.
-
-    Returns
-    -------
-    str
-        One of "red", "blue", or "green".
-
-    Raises
-    ------
-    ValueError
-        If the returned color is not in VALID_COLORS (defensive check).
+    Ask the LLM to classify the color on the belt.
+    Returns one of: 'red', 'blue', 'green'
     """
+    prompt = (
+        f"You are an AI controlling a conveyor belt color-segregation system.\n"
+        f"The item currently on the belt is: {obs['color']}\n"
+        f"You must output ONLY one word — the color to classify this item.\n"
+        f"Valid choices: red, blue, green\n"
+        f"Output exactly one word, nothing else."
+    )
 
-    color = _stub_classify(image_or_patch)
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=10,
+            temperature=0.0,
+        )
+        answer = response.choices[0].message.content.strip().lower()
+        # Extract valid color from response
+        for color in COLORS:
+            if color in answer:
+                return color
+        return random.choice(COLORS)   # fallback
+    except Exception as e:
+        # If LLM call fails, use rule-based fallback
+        return obs.get("color", random.choice(COLORS))
 
-    # Defensive assertion — real model output must also pass this check
-    if color not in VALID_COLORS:
-        raise ValueError(f"classify_color returned invalid color: {color!r}. Must be one of {VALID_COLORS}.")
 
-    return color
-
-
-def _stub_classify(image_or_patch) -> str:
+# ─────────────────────────────────────────────────────────────────
+#  MAIN EPISODE RUNNER
+# ─────────────────────────────────────────────────────────────────
+def run_episode(max_steps: int = 5) -> dict:
     """
-    Internal stub logic.
-    Swap this function body with real model inference when ready.
+    Run one complete episode and print OpenEnv log lines to stdout.
+
+    Log format (exact):
+      [START] task=<task> env=<env> model=<model>
+      [STEP]  step=<n> action=<action> reward=<0.00> done=<bool> error=<msg|null>
+      [END]   success=<bool> steps=<n> rewards=<r1,r2,...>
     """
+    env     = ConveyorEnv(max_steps=max_steps)
+    rewards = []
+    success = False
 
-    # --- Attempt simple pixel average if Pillow is available ---
-    if isinstance(image_or_patch, bytes) and len(image_or_patch) > 0:
-        try:
-            from PIL import Image
-            import io
+    # ── [START] ────────────────────────────────────────────────
+    print(f"[START] task={TASK_NAME} env={ENV_NAME} model={MODEL_NAME}",
+          flush=True)
 
-            img = Image.open(io.BytesIO(image_or_patch)).convert("RGB")
-            img_small = img.resize((8, 8))  # Sample 8×8 grid for speed
-            pixels = list(img_small.getdata())
-            avg_r = sum(p[0] for p in pixels) / len(pixels)
-            avg_g = sum(p[1] for p in pixels) / len(pixels)
-            avg_b = sum(p[2] for p in pixels) / len(pixels)
+    try:
+        obs = env.reset()
 
-            for color_name, test_fn in _RGB_THRESHOLDS.items():
-                if test_fn(avg_r, avg_g, avg_b):
-                    return color_name
+        for step_num in range(1, max_steps + 1):
+            # Agent decides action
+            action = get_llm_action(obs)
 
-            # Fallback: pick highest channel
-            max_channel = max(avg_r, avg_g, avg_b)
-            if max_channel == avg_r:
-                return "red"
-            if max_channel == avg_g:
-                return "green"
-            return "blue"
+            # Environment step
+            obs, reward, done, info = env.step(action)
+            rewards.append(reward)
 
-        except ImportError:
-            pass  # Pillow not installed — fall through to random
-        except Exception:
-            pass  # Corrupt image bytes — fall through to random
+            error_str = info.get("error") or "null"
+            done_str  = "true" if done else "false"
 
-    # --- Default: deterministic pseudo-random for demo purposes ---
-    # Replace with: return my_real_model.predict(image_or_patch)
-    return random.choice(VALID_COLORS)
+            # ── [STEP] ─────────────────────────────────────────
+            print(
+                f"[STEP] step={step_num} action={action!r} "
+                f"reward={reward:.2f} done={done_str} error={error_str}",
+                flush=True
+            )
+
+            if done:
+                break
+
+        # Episode success = at least one correct classification
+        success = any(r > 0 for r in rewards)
+
+    except Exception as exc:
+        rewards = rewards or [0.0]
+        success = False
+        print(f"[STEP] step={len(rewards)} action=null reward=0.00 "
+              f"done=true error={str(exc)}", flush=True)
+    finally:
+        env.close()
+
+    # ── [END] ──────────────────────────────────────────────────
+    rewards_str  = ",".join(f"{r:.2f}" for r in rewards) if rewards else "0.00"
+    success_str  = "true" if success else "false"
+    steps_done   = len(rewards)
+
+    print(
+        f"[END] success={success_str} steps={steps_done} rewards={rewards_str}",
+        flush=True
+    )
+
+    return {"success": success, "steps": steps_done, "rewards": rewards}
 
 
-def batch_classify(images: list) -> list:
+def run_inference(prompt: str = "Hello from OpenEnv!") -> str:
     """
-    Classify multiple images in one call.
-    Useful for batch inference when processing a sequence of frames.
-
-    Parameters
-    ----------
-    images : list of bytes | str | None
-        A list of image_or_patch values (same type as classify_color input).
-
-    Returns
-    -------
-    list of str
-        A list of color strings, one per input image.
+    Simple inference function (used for direct API calls / testing).
+    Returns LLM response as string.
     """
-    return [classify_color(img) for img in images]
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=100,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error: {e}"
 
 
-# ─── Self-test / demo ────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+#  ENTRY POINT
+# ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    print("=== inference.py self-test ===")
-    print("10 random classifications (no image input):")
-    for i in range(10):
-        result = classify_color()
-        assert result in VALID_COLORS, f"Invalid result: {result}"
-        print(f"  [{i+1:02d}] {result}")
-
-    print("\nBatch classification (5 items):")
-    results = batch_classify([None] * 5)
-    for i, r in enumerate(results):
-        print(f"  [{i+1}] {r}")
-
-    print("\nAll tests passed ✓")
+    run_episode(max_steps=5)
