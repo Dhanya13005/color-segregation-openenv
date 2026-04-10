@@ -1265,4 +1265,4 @@ function init() {
 }
 
 // Run when DOM is ready (script is deferred so this is always safe)
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', init); 

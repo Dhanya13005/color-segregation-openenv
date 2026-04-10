@@ -1,24 +1,20 @@
-# openenv.yaml — AI Conveyor Color Segregation System
-# =====================================================
-# IMPORTANT: Do NOT add &tls=true to the URI.
-# The app uses certifi to handle TLS correctly for Python 3.14 + Atlas.
+spec_version: 1
+name: ai-conveyor-color-segregation
+version: "1.0.0"
+type: space
+runtime: fastapi
+app: app:app
+port: 7860
 
-# ── Server ──────────────────────────────────────────────────────
-FASTAPI_PORT: 8000
+tasks:
+  - id: task_easy
+    difficulty: easy
+    grader: grade/task_easy
 
-# ── MongoDB Atlas ───────────────────────────────────────────────
-# Remove &tls=true — certifi handles SSL in code
-MONGO_URI: "mongodb+srv://dhanyags13_db_user:pCksMQIAvnUxYaXp@cluster0.uv5ndj8.mongodb.net/conveyor_db?retryWrites=true&w=majority"
-MONGO_DB: "conveyor_db"
+  - id: task_medium
+    difficulty: medium
+    grader: grade/task_medium
 
-# ── JWT ─────────────────────────────────────────────────────────
-# Generate real key: python -c "import secrets; print(secrets.token_hex(32))"
-SECRET_KEY: "ai_conveyor_secret_key_change_in_production_2024"
-JWT_EXPIRE_HOURS: 8
-
-# ── Debug ────────────────────────────────────────────────────────
-DEBUG: "true"
-
-# ── Built-in accounts (seeded at startup) ────────────────────────
-# admin / admin123
-# demo  / demo
+  - id: task_hard
+    difficulty: hard
+    grader: grade/task_hard
