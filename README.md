@@ -2,7 +2,6 @@
 
 A modern full-stack web application that simulates an intelligent conveyor belt system for color-based object segregation. Built with FastAPI, MongoDB, and a dynamic JavaScript frontend.
 
----
 
 ## 🌐 Live Demo
 https://dhanyasrig-ai-conveyor-system.hf.space
